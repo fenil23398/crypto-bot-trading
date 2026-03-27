@@ -1,0 +1,22 @@
+{
+  "name": "trading-bot-backend",
+  "version": "1.0.0",
+  "description": "Backend service for trading bot — fetches candle data, computes indicators, executes trades",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "mongoose": "^8.9.5",
+    "node-cron": "^3.0.3",
+    "technicalindicators": "^3.1.0",
+    "winston": "^3.17.0"
+  }
+}
