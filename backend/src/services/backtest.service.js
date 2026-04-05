@@ -1,5 +1,6 @@
 import Candle from '../models/candle.model.js';
 import { calculateSuperTrend } from './indicators/supertrend.js';
+import { pickSuperTrendFlipAtSeriesEnd } from './strategies/supertrend.strategy.js';
 import { calculateMACD } from './indicators/macd.js';
 import { calculateRSIEMA } from './indicators/rsi-ema.js';
 import { calculateMA9 } from './indicators/ma9.js';
@@ -21,17 +22,23 @@ const STRATEGY_CONFIGS = {
       const { period, multiplier } = config.supertrend;
       const results = calculateSuperTrend(candles, period, multiplier);
       const signals = [];
+      const seen = new Set();
+      const minN = period + 2;
 
-      for (let i = 1; i < results.length; i++) {
-        const curr = results[i];
-        const prev = results[i - 1];
-        if (!curr || !prev) continue;
-        if (prev.direction !== curr.direction) {
-          signals.push({
-            index: i,
-            action: curr.direction === 1 ? 'BUY' : 'SELL',
-          });
-        }
+      // Same tail logic as live `evaluate`: after each new closed bar, detect flip on latest
+      // or on previous bar (continuation). Dedupe so each flip index emits once.
+      for (let n = minN; n <= candles.length; n++) {
+        const picked = pickSuperTrendFlipAtSeriesEnd(results, candles, n);
+        if (picked.error || picked.noFlip) continue;
+        const idx = picked.flipIndex;
+        if (seen.has(idx)) continue;
+        seen.add(idx);
+        signals.push({
+          index: idx,
+          action: picked.lineAfterFlip.direction === 1 ? 'BUY' : 'SELL',
+          /** Matches live `passesAdxTrendFilter`: ADX on latest bar (n−1) when this signal first appears */
+          adxEvaluationIndex: n - 1,
+        });
       }
       return { signals, config: { period, multiplier } };
     },
@@ -156,12 +163,16 @@ export async function runBacktest({
   }
 
   const { signals: rawSignals, config: strategyConfig } = strategyDef.computeSignals(candles);
-  const { signals, rawCount, filteredCount } = filterSignalsByAdx(candles, rawSignals, adxOpts);
+  const filterResult = filterSignalsByAdx(candles, rawSignals, adxOpts);
+  const { signals, rawCount, filteredCount, adxAligned } = filterResult;
+
   const supertrendRows =
     strategy === 'supertrend'
       ? calculateSuperTrend(candles, config.supertrend.period, config.supertrend.multiplier)
       : null;
-  const adxRows = adxOpts.enabled ? calculateADXAligned(candles, adxOpts.period) : null;
+
+  const adxForDiag = adxAligned ?? calculateADXAligned(candles, adxOpts.period);
+  const adxRows = adxOpts.enabled ? adxForDiag : null;
 
   const trades = [];
   let balance = startBalance;
@@ -361,6 +372,18 @@ export async function runBacktest({
       signalsFilteredOut: filteredCount,
       signalsUsed: signals.length,
     },
+    ...(strategy === 'supertrend' && supertrendRows
+      ? {
+          superTrendDiagnostics: buildSuperTrendDiagnostics({
+            candles,
+            rawSignals,
+            filteredSignals: signals,
+            adxOpts,
+            adxAligned: adxForDiag,
+            stRows: supertrendRows,
+          }),
+        }
+      : {}),
   };
 
   logger.info(`Backtest complete: ${strategyDef.displayName} on ${symbol}`, summary);
@@ -387,4 +410,63 @@ function calculatePnl(openTrade, exitPrice, leverage, feePercent) {
 
 function round(n) {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Explains recent bars + why the latest SuperTrend flip may not have become a trade (usually ADX < threshold).
+ */
+function buildSuperTrendDiagnostics({
+  candles,
+  rawSignals,
+  filteredSignals,
+  adxOpts,
+  adxAligned,
+  stRows,
+}) {
+  const tailN = 8;
+  const start = Math.max(0, candles.length - tailN);
+  const tailBars = [];
+  for (let i = start; i < candles.length; i++) {
+    const st = stRows[i];
+    const adx = adxAligned?.[i];
+    tailBars.push({
+      openTime: candles[i].openTime,
+      close: round(candles[i].close),
+      stDirection: st ? (st.direction === 1 ? 'BULL' : 'BEAR') : null,
+      adx: adx?.adx ?? null,
+    });
+  }
+
+  const filteredSet = new Set(filteredSignals.map((s) => s.index));
+  let lastBlockedSignal = null;
+  for (let j = rawSignals.length - 1; j >= 0; j--) {
+    const s = rawSignals[j];
+    if (filteredSet.has(s.index)) continue;
+    const adxIdx = s.adxEvaluationIndex ?? s.index;
+    const row = adxAligned?.[adxIdx];
+    lastBlockedSignal = {
+      signalIndex: s.index,
+      action: s.action,
+      signalBarOpenTime: candles[s.index].openTime,
+      adxEvaluationIndex: adxIdx,
+      adxAtEvaluation: row?.adx ?? null,
+      adxThreshold: adxOpts.threshold,
+      reason: !adxOpts.enabled
+        ? 'adx_filter_disabled'
+        : !row
+          ? 'adx_not_available'
+          : 'adx_below_threshold',
+    };
+    break;
+  }
+
+  let note = null;
+  if (adxOpts.enabled && lastBlockedSignal?.reason === 'adx_below_threshold') {
+    const adxVal = lastBlockedSignal.adxAtEvaluation ?? 'N/A';
+    note = `SuperTrend produced ${lastBlockedSignal.action} on the signal bar, but ADX on the evaluation bar was ${adxVal} (needs ≥ ${lastBlockedSignal.adxThreshold}). The live bot uses the same rule, so it would not place this order either. Lower “ADX min” or disable the filter to include such signals.`;
+  } else if (adxOpts.enabled && lastBlockedSignal?.reason === 'adx_not_available') {
+    note = 'Latest SuperTrend signal was skipped because ADX was not available at the evaluation index (warmup).';
+  }
+
+  return { tailBars, lastBlockedSignal, note };
 }

@@ -109,6 +109,8 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
   const result = strategy.evaluate(candles);
 
   const latestCandle = candles[candles.length - 1];
+  /** Strategy may attach the bar where the signal formed (e.g. SuperTrend flip on prior candle) */
+  let signalCandle = result.signalCandle ?? latestCandle;
 
   let signalAction = result.signal;
   let delayedFlip = false;
@@ -130,6 +132,7 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
           if (heldSide !== trendSide) {
             signalAction = trendSide;
             delayedFlip = true;
+            signalCandle = latestCandle;
           }
         }
       } catch (err) {
@@ -151,9 +154,26 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
     threshold: runtimeParams.adxThreshold,
   });
   if (!adxCheck.pass) {
+    const snap = adxCheck.snapshot;
+    const adxHint =
+      snap?.adx != null && snap?.threshold != null
+        ? ` ADX=${snap.adx} (need ≥${snap.threshold}).`
+        : '';
     logger.info(
-      `[${strategy.displayName}] ${symbol}: signal skipped — ADX trend filter (${adxCheck.reason})`,
-      adxCheck.snapshot ?? {},
+      `[${strategy.displayName}] ${symbol}: ${signalAction} would trigger — blocked by ADX (${adxCheck.reason}).${adxHint}`,
+      {
+        blockedByAdx: true,
+        strategy: strategy.name,
+        symbol,
+        intendedAction: signalAction,
+        signalBarOpenTime: signalCandle.openTime.toISOString(),
+        signalPrice: signalCandle.close,
+        delayedFlip,
+        flipOn: result.meta?.flipOn,
+        adxReason: adxCheck.reason,
+        adx: snap?.adx,
+        adxThreshold: snap?.threshold,
+      },
     );
     return null;
   }
@@ -165,9 +185,11 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
     delayedFlip,
   };
 
-  const alreadyExists = await signalExists(symbol, strategy.name, latestCandle.openTime);
+  const alreadyExists = await signalExists(symbol, strategy.name, signalCandle.openTime);
   if (alreadyExists) {
-    logger.info(`[${strategy.displayName}] ${symbol}: signal already recorded for ${latestCandle.openTime.toISOString()}`);
+    logger.info(
+      `[${strategy.displayName}] ${symbol}: signal already recorded for ${signalCandle.openTime.toISOString()}`,
+    );
     return null;
   }
 
@@ -176,8 +198,8 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
     interval,
     strategy: strategy.name,
     action: signalAction,
-    price: latestCandle.close,
-    candleOpenTime: latestCandle.openTime,
+    price: signalCandle.close,
+    candleOpenTime: signalCandle.openTime,
     indicators: result.indicators,
   });
 
@@ -185,16 +207,16 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
     strategy: strategy.name,
     symbol,
     action: signalAction,
-    price: latestCandle.close,
-    candleOpenTime: latestCandle.openTime,
+    price: signalCandle.close,
+    candleOpenTime: signalCandle.openTime,
     indicators: result.indicators,
     status: 'signal_generated',
-    message: `${signalAction} signal @ ${latestCandle.close} — ${strategy.displayName}${delayedFlip ? ' delayed flip confirmation' : ' triggered'}`,
+    message: `${signalAction} signal @ ${signalCandle.close} — ${strategy.displayName}${delayedFlip ? ' delayed flip confirmation' : ' triggered'}`,
   });
 
   logger.info(
-    `🔔 [${strategy.displayName}] ${signalAction} ORDER INITIATED — ${symbol} @ ${latestCandle.close}`,
-    { ...result.meta, candleTime: latestCandle.openTime.toISOString() },
+    `🔔 [${strategy.displayName}] ${signalAction} ORDER INITIATED — ${symbol} @ ${signalCandle.close}`,
+    { ...result.meta, candleTime: signalCandle.openTime.toISOString() },
   );
 
   try {

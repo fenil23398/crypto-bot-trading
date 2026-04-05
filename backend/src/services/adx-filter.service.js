@@ -82,7 +82,9 @@ export function filterSignalsByAdx(candles, signals, options = null) {
   const filtered = [];
 
   for (const sig of signals) {
-    const row = adxAligned[sig.index];
+    /** Live bot uses ADX on the newest bar in the window when the signal fires, not always the flip bar */
+    const adxIdx = sig.adxEvaluationIndex ?? sig.index;
+    const row = adxAligned[adxIdx];
     if (row && row.adx >= opts.threshold) {
       filtered.push(sig);
     }

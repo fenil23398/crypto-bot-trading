@@ -123,6 +123,25 @@ export interface BacktestSummary {
     signalsFilteredOut: number;
     signalsUsed: number;
   };
+  /** Present for SuperTrend backtests: recent ST/ADX tail + why the latest flip may be skipped */
+  superTrendDiagnostics?: {
+    tailBars: Array<{
+      openTime: string;
+      close: number;
+      stDirection: "BULL" | "BEAR" | null;
+      adx: number | null;
+    }>;
+    lastBlockedSignal: {
+      signalIndex: number;
+      action: Side;
+      signalBarOpenTime: string;
+      adxEvaluationIndex: number;
+      adxAtEvaluation: number | null;
+      adxThreshold: number;
+      reason: string;
+    } | null;
+    note: string | null;
+  };
 }
 
 export interface BacktestResult {

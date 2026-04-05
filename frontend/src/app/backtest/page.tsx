@@ -33,6 +33,7 @@ import {
   FlaskConical,
   Activity,
   Filter,
+  Info,
 } from "lucide-react";
 
 const STRATEGIES = [
@@ -119,7 +120,8 @@ export default function BacktestPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-white">Backtest</h1>
         <p className="text-sm text-zinc-500">
-          Historical simulation with SL/TP and optional ADX trend filter
+          Simulate strategies on stored candles with SL/TP. Use the ADX block below to
+          match live bot filtering.
         </p>
       </div>
 
@@ -213,22 +215,26 @@ export default function BacktestPage() {
             </div>
           </div>
 
-          <div className="mt-6 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Filter className="h-4 w-4 text-cyan-400" />
+          {/* Full-width panel (not a grid child) so ADX never disappears in production layouts */}
+          <div
+            className="mt-5 w-full rounded-xl border border-cyan-500/30 bg-cyan-500/[0.06] p-4"
+            data-testid="backtest-adx-filter"
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Filter className="h-4 w-4 shrink-0 text-cyan-400" />
               <span className="text-sm font-semibold text-white">ADX trend filter</span>
+              <span className="text-xs text-zinc-500">
+                (only signals when ADX ≥ threshold)
+              </span>
             </div>
-            <p className="mb-4 text-xs text-zinc-500">
-              Only count signals when ADX ≥ threshold (stronger trend). Matches live bot behavior when enabled in backend <code className="rounded bg-white/5 px-1 text-zinc-400">.env</code>.
-            </p>
-            <div className="flex flex-wrap items-center gap-6">
+            <div className="flex flex-wrap items-end gap-6">
               <div className="flex items-center gap-3">
                 <Switch
                   checked={adxFilterEnabled}
                   onCheckedChange={setAdxFilterEnabled}
                   id="adx-enabled"
                 />
-                <label htmlFor="adx-enabled" className="text-sm text-zinc-300">
+                <label htmlFor="adx-enabled" className="text-sm text-zinc-200">
                   Enable ADX filter
                 </label>
               </div>
@@ -241,7 +247,7 @@ export default function BacktestPage() {
                   min={2}
                   max={50}
                   disabled={!adxFilterEnabled}
-                  className={inputClass + " w-24 disabled:opacity-40"}
+                  className={inputClass + " w-28 disabled:opacity-40"}
                 />
               </div>
               <div className="space-y-1.5">
@@ -254,7 +260,7 @@ export default function BacktestPage() {
                   max={100}
                   step={0.5}
                   disabled={!adxFilterEnabled}
-                  className={inputClass + " w-28 disabled:opacity-40"}
+                  className={inputClass + " w-32 disabled:opacity-40"}
                 />
               </div>
             </div>
@@ -395,6 +401,104 @@ export default function BacktestPage() {
             config={result.summary.strategyConfig}
             delay={0.45}
           />
+
+          {result.summary.superTrendDiagnostics && (
+            <Card
+              className="border-amber-500/20 bg-[#111113] transition-all duration-300 hover:border-amber-500/30 animate-slide-up"
+              style={{ animationDelay: "0.48s", animationFillMode: "both" }}
+            >
+              <CardHeader className="flex flex-row items-start gap-3 pb-2">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/25 bg-amber-500/10">
+                  <Info className="h-4 w-4 text-amber-400" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-white">
+                    SuperTrend — recent bars &amp; ADX
+                  </CardTitle>
+                  <CardDescription className="text-zinc-500">
+                    Why a chart flip may not appear as a trade (usually ADX &lt; your
+                    minimum).
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {result.summary.superTrendDiagnostics.note && (
+                  <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-sm text-amber-100/90">
+                    {result.summary.superTrendDiagnostics.note}
+                  </p>
+                )}
+                <div className="max-h-[220px] overflow-auto rounded-lg border border-white/[0.06]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/[0.06] hover:bg-transparent">
+                        <TableHead className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          Open (UTC)
+                        </TableHead>
+                        <TableHead className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          Close
+                        </TableHead>
+                        <TableHead className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          SuperTrend
+                        </TableHead>
+                        <TableHead className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          ADX
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {result.summary.superTrendDiagnostics.tailBars.map((row, idx) => (
+                        <TableRow
+                          key={idx}
+                          className="border-white/[0.06] hover:bg-white/[0.02]"
+                        >
+                          <TableCell className="whitespace-nowrap text-xs text-zinc-300">
+                            {new Date(row.openTime).toISOString().slice(0, 16).replace("T", " ")}
+                          </TableCell>
+                          <TableCell className="text-xs text-zinc-200">
+                            ${row.close.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {row.stDirection ? (
+                              <span
+                                className={
+                                  row.stDirection === "BULL"
+                                    ? "text-emerald-400"
+                                    : "text-red-400"
+                                }
+                              >
+                                {row.stDirection}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-zinc-300">
+                            {row.adx != null ? row.adx.toFixed(2) : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {result.summary.superTrendDiagnostics.lastBlockedSignal && (
+                  <p className="text-xs text-zinc-500">
+                    Last raw signal not traded:{" "}
+                    <span className="text-zinc-300">
+                      {result.summary.superTrendDiagnostics.lastBlockedSignal.action}
+                    </span>{" "}
+                    at index{" "}
+                    {result.summary.superTrendDiagnostics.lastBlockedSignal.signalIndex}{" "}
+                    · ADX at evaluation:{" "}
+                    {result.summary.superTrendDiagnostics.lastBlockedSignal.adxAtEvaluation?.toFixed(
+                      2
+                    ) ?? "—"}{" "}
+                    (min{" "}
+                    {result.summary.superTrendDiagnostics.lastBlockedSignal.adxThreshold})
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card
             className="border-white/[0.06] bg-[#111113] transition-all duration-300 hover:border-white/[0.1] animate-slide-up"
