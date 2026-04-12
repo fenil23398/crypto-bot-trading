@@ -36,7 +36,7 @@ const STRATEGY_CONFIGS = {
         signals.push({
           index: idx,
           action: picked.lineAfterFlip.direction === 1 ? 'BUY' : 'SELL',
-          /** Matches live `passesAdxTrendFilter`: ADX on latest bar (n−1) when this signal first appears */
+          /** Legacy backtest: ADX on bar `n−1` when this flip first appears in the prefix walk */
           adxEvaluationIndex: n - 1,
         });
       }
@@ -463,7 +463,7 @@ function buildSuperTrendDiagnostics({
   let note = null;
   if (adxOpts.enabled && lastBlockedSignal?.reason === 'adx_below_threshold') {
     const adxVal = lastBlockedSignal.adxAtEvaluation ?? 'N/A';
-    note = `SuperTrend produced ${lastBlockedSignal.action} on the signal bar, but ADX on the evaluation bar was ${adxVal} (needs ≥ ${lastBlockedSignal.adxThreshold}). The live bot uses the same rule, so it would not place this order either. Lower “ADX min” or disable the filter to include such signals.`;
+    note = `SuperTrend produced ${lastBlockedSignal.action} on the signal bar, but ADX on the evaluation bar was ${adxVal} (needs ≥ ${lastBlockedSignal.adxThreshold}). Lower “ADX min” or disable the filter to include such signals.`;
   } else if (adxOpts.enabled && lastBlockedSignal?.reason === 'adx_not_available') {
     note = 'Latest SuperTrend signal was skipped because ADX was not available at the evaluation index (warmup).';
   }

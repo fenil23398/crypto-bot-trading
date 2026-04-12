@@ -30,9 +30,9 @@ export function resolveAdxFilterOptions(overrides = {}) {
 }
 
 /**
- * Live bot: latest bar must have ADX >= threshold (trend strong enough).
+ * ADX at a specific bar index over `candles` (full-series Wilder ADX, same as legacy backtest).
  */
-export function passesAdxTrendFilter(candles, options = null) {
+export function passesAdxTrendFilterAtBar(candles, barIndex, options = null) {
   const opts = options ?? resolveAdxFilterOptions();
   if (!opts.enabled) {
     return { pass: true, reason: 'adx_filter_disabled', snapshot: null };
@@ -43,32 +43,42 @@ export function passesAdxTrendFilter(candles, options = null) {
   }
 
   const aligned = calculateADXAligned(candles, opts.period);
-  const latest = aligned[candles.length - 1];
+  const row = aligned[barIndex] ?? null;
 
-  if (!latest) {
+  if (!row) {
     return { pass: false, reason: 'adx_no_value', snapshot: null };
   }
 
-  if (latest.adx < opts.threshold) {
+  if (row.adx < opts.threshold) {
     return {
       pass: false,
       reason: 'adx_below_threshold',
-      snapshot: { ...latest, threshold: opts.threshold, period: opts.period },
+      snapshot: { ...row, threshold: opts.threshold, period: opts.period, barIndex },
     };
   }
 
   return {
     pass: true,
     reason: 'adx_ok',
-    snapshot: { ...latest, threshold: opts.threshold, period: opts.period },
+    snapshot: { ...row, threshold: opts.threshold, period: opts.period, barIndex },
   };
 }
 
 /**
- * Backtest: keep only signals whose bar has ADX >= threshold.
+ * Live bot (default): newest bar in `candles` must have ADX >= threshold.
+ */
+export function passesAdxTrendFilter(candles, options = null) {
+  if (!candles?.length) {
+    return { pass: false, reason: 'adx_not_enough_bars', snapshot: null };
+  }
+  return passesAdxTrendFilterAtBar(candles, candles.length - 1, options);
+}
+
+/**
+ * Backtest: keep only signals whose evaluation bar has ADX >= threshold.
  */
 export function filterSignalsByAdx(candles, signals, options = null) {
-  const opts = options ?? resolveAdxFilterOptions();
+  const opts = options ?? resolveAdxFilterOptions(options);
   if (!opts.enabled) {
     return {
       signals,
@@ -82,7 +92,6 @@ export function filterSignalsByAdx(candles, signals, options = null) {
   const filtered = [];
 
   for (const sig of signals) {
-    /** Live bot uses ADX on the newest bar in the window when the signal fires, not always the flip bar */
     const adxIdx = sig.adxEvaluationIndex ?? sig.index;
     const row = adxAligned[adxIdx];
     if (row && row.adx >= opts.threshold) {

@@ -19,6 +19,20 @@ function dirLabel(d) {
  * @param {number} [length] — use first `length` bars only (prefix of `results` / `candles`).
  *   Omit to use full series (live `evaluate`). Backtest passes growing `n` to match each closed bar.
  */
+/**
+ * Bar index whose ADX the legacy backtest used for this flip: `n - 1` at the smallest prefix length `n`
+ * where the flip first appears (matches `computeSignals` in backtest.service.js).
+ */
+export function superTrendAdxEvaluationIndexForFlip(results, candles, flipIndex) {
+  const minN = config.supertrend.period + 2;
+  for (let n = minN; n <= candles.length; n++) {
+    const p = pickSuperTrendFlipAtSeriesEnd(results, candles, n);
+    if (p.error || p.noFlip) continue;
+    if (p.flipIndex === flipIndex) return n - 1;
+  }
+  return Math.max(0, candles.length - 1);
+}
+
 export function pickSuperTrendFlipAtSeriesEnd(results, candles, length) {
   const n = length ?? candles.length;
   const latestIdx = n - 1;

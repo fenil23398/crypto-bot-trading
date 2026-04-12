@@ -3,10 +3,16 @@ import Signal from '../models/signal.model.js';
 import BotLog from '../models/bot-log.model.js';
 import BotConfig from '../models/bot-config.model.js';
 import { getStrategy, getAllStrategies, strategyExists } from './strategies/registry.js';
+import {
+  pickSuperTrendFlipAtSeriesEnd,
+  superTrendAdxEvaluationIndexForFlip,
+} from './strategies/supertrend.strategy.js';
+import { calculateSuperTrend } from './indicators/supertrend.js';
 import { executeSignal } from './order-manager.service.js';
 import * as aster from './aster.service.js';
 import {
   passesAdxTrendFilter,
+  passesAdxTrendFilterAtBar,
   resolveAdxFilterOptions,
   adxWarmupBars,
 } from './adx-filter.service.js';
@@ -83,6 +89,11 @@ async function loadCandles(symbol, interval, limit) {
     .then((docs) => docs.reverse());
 }
 
+/** Full stored history (ascending) — used for SuperTrend so live matches legacy backtest. */
+async function loadCandlesAscending(symbol, interval) {
+  return Candle.find({ symbol, interval }).sort({ openTime: 1 }).lean();
+}
+
 function candleLimitForStrategy(strategy, runtimeParams) {
   const base = strategy.requiredCandles;
   const opts = resolveAdxFilterOptions({
@@ -105,7 +116,10 @@ async function signalExists(symbol, strategy, candleOpenTime) {
 async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
   const runtimeParams = botState.runtimeParams;
   const limit = candleLimitForStrategy(strategy, runtimeParams);
-  const candles = await loadCandles(symbol, interval, limit);
+  const candles =
+    strategy.name === 'supertrend'
+      ? await loadCandlesAscending(symbol, interval)
+      : await loadCandles(symbol, interval, limit);
   const result = strategy.evaluate(candles);
 
   const latestCandle = candles[candles.length - 1];
@@ -148,11 +162,27 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
     return null;
   }
 
-  const adxCheck = passesAdxTrendFilter(candles, {
+  const adxOpts = {
     enabled: runtimeParams.adxFilterEnabled,
     period: runtimeParams.adxPeriod,
     threshold: runtimeParams.adxThreshold,
-  });
+  };
+
+  let adxCheck;
+  if (strategy.name === 'supertrend' && adxOpts.enabled) {
+    const { period, multiplier } = config.supertrend;
+    const stResults = calculateSuperTrend(candles, period, multiplier);
+    const tip = pickSuperTrendFlipAtSeriesEnd(stResults, candles);
+    const barIndex = delayedFlip
+      ? candles.length - 1
+      : !tip.noFlip && !tip.error
+        ? superTrendAdxEvaluationIndexForFlip(stResults, candles, tip.flipIndex)
+        : candles.length - 1;
+    adxCheck = passesAdxTrendFilterAtBar(candles, barIndex, adxOpts);
+  } else {
+    adxCheck = passesAdxTrendFilter(candles, adxOpts);
+  }
+
   if (!adxCheck.pass) {
     const snap = adxCheck.snapshot;
     const adxHint =
@@ -173,6 +203,7 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
         adxReason: adxCheck.reason,
         adx: snap?.adx,
         adxThreshold: snap?.threshold,
+        ...(snap?.barIndex != null ? { adxEvaluationIndex: snap.barIndex } : {}),
       },
     );
     return null;
