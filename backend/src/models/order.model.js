@@ -51,6 +51,10 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    ostiumOrderId: {
+      type: String,
+      default: null,
+    },
     parentOrderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Order',
@@ -68,6 +72,7 @@ const orderSchema = new mongoose.Schema(
 
 orderSchema.index({ strategy: 1, symbol: 1, createdAt: -1 });
 orderSchema.index({ asterOrderId: 1 });
+orderSchema.index({ ostiumOrderId: 1 });
 orderSchema.index({ parentOrderId: 1 });
 
 const Order = mongoose.model('Order', orderSchema);

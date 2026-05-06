@@ -23,6 +23,21 @@ router.get('/', async (_req, res) => {
     bots,
     adxFilter: resolveAdxFilterOptions(),
     availableSymbols: config.binance.symbols,
+    tradingPlatforms: ['aster', 'ostium'],
+    platformDefaults: {
+      aster: {
+        leverage: config.aster.leverage,
+        tradeUsdt: config.aster.tradeUsdt,
+        slPercent: config.aster.slPercent,
+        tpPercent: config.aster.tpPercent,
+      },
+      ostium: {
+        leverage: config.ostium.leverage,
+        tradeUsdt: config.ostium.tradeUsdt,
+        slPercent: config.ostium.slPercent,
+        tpPercent: config.ostium.tpPercent,
+      },
+    },
   });
 });
 

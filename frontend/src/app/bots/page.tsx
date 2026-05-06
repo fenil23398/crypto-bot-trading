@@ -17,7 +17,22 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Bot, Zap, Signal, Clock } from "lucide-react";
-import type { BotRuntimeParams, BotStatus } from "@/lib/types";
+import type {
+  BotRuntimeParams,
+  BotStatus,
+  PlatformTradeDefaults,
+  TradingPlatform,
+} from "@/lib/types";
+
+const PLATFORM_LABEL: Record<TradingPlatform, string> = {
+  aster: "Aster",
+  ostium: "Ostium",
+};
+
+const FALLBACK_PLATFORM_DEFAULTS: Record<TradingPlatform, PlatformTradeDefaults> = {
+  aster: { leverage: 3, tradeUsdt: 100, slPercent: 25, tpPercent: 25 },
+  ostium: { leverage: 3, tradeUsdt: 100, slPercent: 25, tpPercent: 25 },
+};
 
 export default function BotsPage() {
   const { data: botsData, isLoading, error, isValidating, mutate: revalidateBots } =
@@ -25,6 +40,12 @@ export default function BotsPage() {
   const bots = botsData?.bots;
   const adxFilter = botsData?.adxFilter;
   const availableSymbols = botsData?.availableSymbols ?? ["BTCUSDT", "ETHUSDT"];
+  const tradingPlatforms: TradingPlatform[] = botsData?.tradingPlatforms ?? [
+    "aster",
+    "ostium",
+  ];
+  const platformDefaults =
+    botsData?.platformDefaults ?? FALLBACK_PLATFORM_DEFAULTS;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -104,6 +125,8 @@ export default function BotsPage() {
               bot={bot}
               index={i}
               availableSymbols={availableSymbols}
+              tradingPlatforms={tradingPlatforms}
+              platformDefaults={platformDefaults}
             />
           ))}
         </div>
@@ -123,10 +146,14 @@ function BotCard({
   bot,
   index,
   availableSymbols,
+  tradingPlatforms,
+  platformDefaults,
 }: {
   bot: BotStatus;
   index: number;
   availableSymbols: string[];
+  tradingPlatforms: TradingPlatform[];
+  platformDefaults: Record<TradingPlatform, PlatformTradeDefaults>;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +215,15 @@ function BotCard({
         <div className="grid grid-cols-2 gap-3">
           <InfoChip icon={<Zap className="h-3 w-3" />} label="Evaluations" value={String(bot.evaluations ?? 0)} />
           <InfoChip icon={<Signal className="h-3 w-3" />} label="Signals" value={String(bot.signalsGenerated ?? 0)} />
+          {bot.active && (
+            <div className="col-span-2">
+              <InfoChip
+                icon={<Bot className="h-3 w-3" />}
+                label="Trading platform"
+                value={PLATFORM_LABEL[runtimeParams.tradingPlatform ?? "aster"]}
+              />
+            </div>
+          )}
           {bot.startedAt && (
             <div className="col-span-2">
               <InfoChip icon={<Clock className="h-3 w-3" />} label="Started" value={new Date(bot.startedAt).toLocaleString()} />
@@ -199,6 +235,31 @@ function BotCard({
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-3">
             <p className="text-xs uppercase tracking-wider text-zinc-500">Runtime Params</p>
             <div className="grid grid-cols-2 gap-2 text-xs">
+              <label className="space-y-1 col-span-2">
+                <span className="text-zinc-500">Trading platform</span>
+                <select
+                  value={runtimeParams.tradingPlatform ?? "aster"}
+                  onChange={(e) => {
+                    const tp = e.target.value as TradingPlatform;
+                    const defs = platformDefaults[tp] ?? FALLBACK_PLATFORM_DEFAULTS[tp];
+                    setRuntimeParams((p) => ({
+                      ...p,
+                      tradingPlatform: tp,
+                      leverage: defs.leverage,
+                      tradeUsdt: defs.tradeUsdt,
+                      slPercent: defs.slPercent,
+                      tpPercent: defs.tpPercent,
+                    }));
+                  }}
+                  className="w-full rounded-md border border-white/10 bg-zinc-900 px-2 py-1.5 text-zinc-200 outline-none focus:border-cyan-500"
+                >
+                  {tradingPlatforms.map((tp) => (
+                    <option key={tp} value={tp}>
+                      {PLATFORM_LABEL[tp]}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="space-y-1 col-span-2">
                 <span className="text-zinc-500">Trading Pair</span>
                 <select

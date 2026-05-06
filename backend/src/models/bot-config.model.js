@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const runtimeParamsSchema = new mongoose.Schema(
   {
+    tradingPlatform: {
+      type: String,
+      enum: ['aster', 'ostium'],
+      default: 'aster',
+    },
     leverage: { type: Number, required: true, min: 1 },
     tradeUsdt: { type: Number, required: true, min: 1 },
     slPercent: { type: Number, required: true, min: 0 },

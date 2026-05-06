@@ -10,6 +10,7 @@ import {
 import { calculateSuperTrend } from './indicators/supertrend.js';
 import { executeSignal } from './order-manager.service.js';
 import * as aster from './aster.service.js';
+import * as ostium from './ostium.service.js';
 import {
   passesAdxTrendFilter,
   passesAdxTrendFilterAtBar,
@@ -24,6 +25,7 @@ const activeBots = new Map();
 export function getDefaultRuntimeParams() {
   const adx = resolveAdxFilterOptions();
   return {
+    tradingPlatform: 'aster',
     leverage: config.aster.leverage,
     tradeUsdt: config.aster.tradeUsdt,
     slPercent: config.aster.slPercent,
@@ -42,6 +44,9 @@ function normalizeRuntimeParams(input = {}) {
     ...input,
   };
 
+  const tradingPlatform = merged.tradingPlatform === 'ostium' ? 'ostium' : 'aster';
+  const pc = tradingPlatform === 'ostium' ? config.ostium : config.aster;
+
   const allowedSymbols = new Set(config.binance.symbols);
   const requestedSymbols = Array.isArray(merged.symbols)
     ? merged.symbols
@@ -53,10 +58,11 @@ function normalizeRuntimeParams(input = {}) {
     .filter((s) => allowedSymbols.has(s));
 
   return {
-    leverage: Math.max(1, parseInt(merged.leverage, 10) || defaults.leverage),
-    tradeUsdt: Math.max(1, parseFloat(merged.tradeUsdt) || defaults.tradeUsdt),
-    slPercent: Math.max(0, parseFloat(merged.slPercent) || defaults.slPercent),
-    tpPercent: Math.max(0, parseFloat(merged.tpPercent) || defaults.tpPercent),
+    tradingPlatform,
+    leverage: Math.max(1, parseInt(merged.leverage, 10) || pc.leverage),
+    tradeUsdt: Math.max(1, parseFloat(merged.tradeUsdt) || pc.tradeUsdt),
+    slPercent: Math.max(0, parseFloat(merged.slPercent) || pc.slPercent),
+    tpPercent: Math.max(0, parseFloat(merged.tpPercent) || pc.tpPercent),
     adxFilterEnabled: Boolean(merged.adxFilterEnabled),
     adxPeriod: Math.max(2, parseInt(merged.adxPeriod, 10) || defaults.adxPeriod),
     adxThreshold: Math.max(0, parseFloat(merged.adxThreshold) || defaults.adxThreshold),
@@ -132,11 +138,15 @@ async function evaluateStrategyForSymbol(strategy, symbol, interval, botState) {
   // SuperTrend-only delayed flip:
   // if we already hold an opposite position and ADX was too weak on flip candle,
   // allow execution on a later candle once ADX confirms.
-  if (!signalAction && strategy.name === 'supertrend' && aster.isConfigured()) {
+  const platform = runtimeParams.tradingPlatform === 'ostium' ? 'ostium' : 'aster';
+  const exchangeReady = platform === 'ostium' ? ostium.isConfigured() : aster.isConfigured();
+
+  if (!signalAction && strategy.name === 'supertrend' && exchangeReady) {
     const stDirection = result?.indicators?.direction;
     if (stDirection === 1 || stDirection === -1) {
       try {
-        const positions = await aster.getPositions(symbol);
+        const positions =
+          platform === 'ostium' ? await ostium.getPositions(symbol) : await aster.getPositions(symbol);
         const pos = positions[0];
         const amt = pos ? parseFloat(pos.positionAmt) : 0;
 

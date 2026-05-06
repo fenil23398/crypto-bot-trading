@@ -1,5 +1,14 @@
 export type Strategy = "supertrend" | "macd" | "rsi_ema" | "ma9" | "rsi_levels";
 export type Side = "BUY" | "SELL";
+export type TradingPlatform = "aster" | "ostium";
+
+/** Per-platform sizing defaults from backend .env (ASTER_* / OSTIUM_*) */
+export interface PlatformTradeDefaults {
+  leverage: number;
+  tradeUsdt: number;
+  slPercent: number;
+  tpPercent: number;
+}
 
 /** ADX trend filter (live bots + backtest defaults) */
 export interface AdxFilterPublic {
@@ -9,6 +18,7 @@ export interface AdxFilterPublic {
 }
 
 export interface BotRuntimeParams {
+  tradingPlatform: TradingPlatform;
   leverage: number;
   tradeUsdt: number;
   slPercent: number;
@@ -70,6 +80,7 @@ export interface Order {
   leverage: number;
   status: string;
   asterOrderId: string | null;
+  ostiumOrderId: string | null;
   parentOrderId: string | null;
   error: string | null;
   createdAt: string;

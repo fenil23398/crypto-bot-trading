@@ -19,6 +19,11 @@ export const api = {
       /** Present on newer API; optional for older backends */
       adxFilter?: import("./types").AdxFilterPublic;
       availableSymbols?: string[];
+      tradingPlatforms?: import("./types").TradingPlatform[];
+      platformDefaults?: Record<
+        import("./types").TradingPlatform,
+        import("./types").PlatformTradeDefaults
+      >;
     }>("/bots"),
 
   getBotStatus: (strategy: string) =>
@@ -54,8 +59,10 @@ export const api = {
     return request<{ orders: import("./types").Order[] }>(`/orders?${q}`);
   },
 
-  getPositions: () =>
-    request<{ positions: import("./types").Position[] }>("/orders/positions"),
+  getPositions: (platform: import("./types").TradingPlatform = "aster") =>
+    request<{ platform: string; positions: import("./types").Position[] }>(
+      `/orders/positions?platform=${encodeURIComponent(platform)}`
+    ),
 
   getHealth: () => request<{ status: string; uptime: number }>("/health"),
 

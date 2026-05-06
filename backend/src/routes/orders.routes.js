@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Order from '../models/order.model.js';
 import * as aster from '../services/aster.service.js';
+import * as ostium from '../services/ostium.service.js';
 
 const router = Router();
 
@@ -25,16 +26,26 @@ router.get('/', async (req, res) => {
 
 /**
  * GET /api/orders/positions
- * Fetch current open positions from ASTER Dex.
+ * Fetch open positions. Query: ?platform=aster|ostium (default aster), ?symbol=BTCUSDT
  */
 router.get('/positions', async (req, res) => {
-  if (!aster.isConfigured()) {
+  const platform = req.query.platform === 'ostium' ? 'ostium' : 'aster';
+  const symbol = req.query.symbol?.toUpperCase();
+
+  if (platform === 'ostium') {
+    if (!ostium.isConfigured()) {
+      return res.status(400).json({ error: 'OSTIUM API keys not configured' });
+    }
+  } else if (!aster.isConfigured()) {
     return res.status(400).json({ error: 'ASTER API keys not configured' });
   }
 
   try {
-    const positions = await aster.getPositions(req.query.symbol?.toUpperCase());
-    res.json({ count: positions.length, positions });
+    const positions =
+      platform === 'ostium'
+        ? await ostium.getPositions(symbol)
+        : await aster.getPositions(symbol);
+    res.json({ platform, count: positions.length, positions });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

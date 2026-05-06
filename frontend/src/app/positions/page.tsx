@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { usePositions } from "@/lib/hooks";
+import type { TradingPlatform } from "@/lib/types";
 import {
   Card,
   CardAction,
@@ -22,21 +24,40 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Inbox, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const PLATFORM_LABEL: Record<TradingPlatform, string> = {
+  aster: "Aster",
+  ostium: "Ostium",
+};
+
 export default function PositionsPage() {
-  const { data: positions, isLoading } = usePositions();
+  const [platform, setPlatform] = useState<TradingPlatform>("aster");
+  const { data: positions, isLoading } = usePositions(platform);
 
   const open =
     positions?.filter((p) => parseFloat(p.positionAmt) !== 0) ?? [];
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
-          Positions
-        </h1>
-        <p className="text-sm text-zinc-500">
-          Live open positions from ASTER Dex (auto-refreshes every 5s)
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            Positions
+          </h1>
+          <p className="text-sm text-zinc-500">
+            Live open positions from {PLATFORM_LABEL[platform]} (every 5s)
+          </p>
+        </div>
+        <label className="flex flex-col gap-1 text-xs text-zinc-500 sm:min-w-[180px]">
+          Platform
+          <select
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value as TradingPlatform)}
+            className="rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 outline-none focus:border-cyan-500"
+          >
+            <option value="aster">Aster</option>
+            <option value="ostium">Ostium</option>
+          </select>
+        </label>
       </div>
 
       <Card className="border border-white/[0.06] bg-[#111113] ring-0">

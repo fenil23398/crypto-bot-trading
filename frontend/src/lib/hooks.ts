@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import { api } from "./api";
+import type { TradingPlatform } from "./types";
 
 export function useBots() {
   return useSWR("bots", () => api.getBots(), {
@@ -45,8 +46,12 @@ export function useOrders(params?: {
   });
 }
 
-export function usePositions() {
-  return useSWR("positions", () => api.getPositions().then((r) => r.positions), {
-    refreshInterval: 5_000,
-  });
+export function usePositions(platform: TradingPlatform = "aster") {
+  return useSWR(
+    `positions-${platform}`,
+    () => api.getPositions(platform).then((r) => r.positions),
+    {
+      refreshInterval: 5_000,
+    }
+  );
 }

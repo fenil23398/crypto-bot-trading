@@ -66,6 +66,16 @@ const config = Object.freeze({
     slPercent: parseFloat(process.env.ASTER_SL_PERCENT) || 25,
     tpPercent: parseFloat(process.env.ASTER_TP_PERCENT) || 25,
   },
+
+  ostium: {
+    /** Local ostium-bridge (Python SDK) — see repo /ostium-bridge */
+    bridgeUrl: process.env.OSTIUM_BRIDGE_URL || 'http://127.0.0.1:5055',
+    bridgeSecret: process.env.OSTIUM_BRIDGE_SECRET || '',
+    leverage: parseInt(process.env.OSTIUM_LEVERAGE, 10) || 3,
+    tradeUsdt: parseFloat(process.env.OSTIUM_TRADE_USDT) || 100,
+    slPercent: parseFloat(process.env.OSTIUM_SL_PERCENT) || 25,
+    tpPercent: parseFloat(process.env.OSTIUM_TP_PERCENT) || 25,
+  },
 });
 
 export default config;
