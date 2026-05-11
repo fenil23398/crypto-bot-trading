@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ui-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ui-mono), ui-monospace, "Cascadia Code", monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -123,6 +123,11 @@
   }
   body {
     @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background-color: rgb(6 182 212 / 0.22);
+    color: #fafafa;
   }
   html {
     @apply font-sans;
@@ -132,7 +137,7 @@
 
 @layer utilities {
   .glow-cyan {
-    box-shadow: 0 0 20px rgba(6, 182, 212, 0.15), 0 0 60px rgba(6, 182, 212, 0.05);
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.1);
   }
   .glow-green {
     box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05);
@@ -145,14 +150,105 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
+
+  .app-heading {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: #fafafa;
+  }
+  @media (min-width: 640px) {
+    .app-heading {
+      font-size: 1.5rem;
+      line-height: 2rem;
+    }
+  }
+  .app-subheading {
+    font-size: 0.8125rem;
+    line-height: 1.375rem;
+    color: rgb(113 113 122);
+    max-width: 40rem;
+  }
+
+  .app-card {
+    border-radius: 0.75rem;
+    border: 1px solid rgb(255 255 255 / 0.07);
+    background: linear-gradient(
+      165deg,
+      rgb(24 24 27 / 0.72) 0%,
+      rgb(9 9 11 / 0.88) 100%
+    );
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.02) inset,
+      0 12px 32px -14px rgb(0 0 0 / 0.55);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .app-card:hover {
+      border-color: rgb(255 255 255 / 0.11);
+      box-shadow:
+        0 0 0 1px rgb(255 255 255 / 0.03) inset,
+        0 14px 36px -12px rgb(0 0 0 / 0.5);
+    }
+  }
+
+  .app-alert {
+    border-radius: 0.75rem;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background: rgb(9 9 11 / 0.55);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 40px -16px rgb(0 0 0 / 0.5);
+  }
+
   .animate-fade-in {
-    animation: fadeIn 0.4s ease-out;
+    animation: fadeIn 0.35s ease-out both;
   }
   .animate-slide-up {
-    animation: slideUp 0.4s ease-out;
+    animation: slideUp 0.28s ease-out both;
   }
   .animate-scale-in {
-    animation: scaleIn 0.3s ease-out;
+    animation: scaleIn 0.28s ease-out both;
+  }
+  .animate-modal-in {
+    animation: modalIn 0.3s ease-out both;
+  }
+  .animate-orb-slow {
+    animation: orbSlow 20s ease-in-out infinite;
+  }
+  .animate-orb-slow-reverse {
+    animation: orbSlowReverse 26s ease-in-out infinite;
+  }
+  .animate-shimmer-line {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(6 182 212 / 0.12),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmerLine 4s ease-in-out infinite;
+  }
+
+  .runtime-details > summary .runtime-chevron {
+    transition: transform 0.2s ease;
+  }
+  .runtime-details[open] > summary .runtime-chevron {
+    transform: rotate(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-scale-in,
+  .animate-modal-in,
+  .animate-orb-slow,
+  .animate-orb-slow-reverse,
+  .animate-shimmer-line {
+    animation: none !important;
   }
 }
 
@@ -161,10 +257,66 @@
   to { opacity: 1; }
 }
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes orbSlow {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.12) translate(8px, -6px);
+  }
+}
+
+@keyframes orbSlowReverse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1.05) translate(0, 0);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1) translate(-10px, 6px);
+  }
+}
+
+@keyframes shimmerLine {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

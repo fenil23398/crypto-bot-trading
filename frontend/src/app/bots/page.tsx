@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useBots } from "@/lib/hooks";
 import { api } from "@/lib/api";
 import { mutate } from "swr";
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import {
   getExpectedBotStartPassword,
   readBotStartUnlockedFromStorage,
@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Bot, Zap, Signal, Clock } from "lucide-react";
 import type { BotRuntimeParams, BotStatus } from "@/lib/types";
+import { ASTER_DEX_SITE_URL } from "@/lib/aster-dex";
 
 const ADMIN_CONTACT_EMAIL = "fenilshah23398@gmail.com";
 
@@ -94,20 +95,32 @@ export default function BotsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Bots</h1>
-          <p className="text-sm text-zinc-500">
+          <h1 className="app-heading">Bots</h1>
+          <p className="app-subheading mt-0.5">
             One card per strategy from the API (start/stop runs that strategy only).
           </p>
-          <p className="mt-1 text-xs text-zinc-600">
+          <p className="mt-1 text-[11px] leading-snug text-zinc-600">
+            Starting a bot places real trades on{" "}
+            <a
+              href={ASTER_DEX_SITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-cyan-500/90 underline-offset-2 hover:text-cyan-400 hover:underline"
+            >
+              Aster DEX
+            </a>{" "}
+            (on-chain perpetuals).
+          </p>
+          <p className="mt-1 text-[11px] leading-snug text-zinc-600">
             <span className="text-zinc-500">MA9 Cross</span> is a strategy card.{" "}
             <span className="text-zinc-500">ADX</span> is a trend filter applied to{" "}
             <em>all</em> strategies when enabled — it is not a separate bot.
           </p>
           {!isLoading && bots && (
-            <p className="mt-2 text-xs font-mono text-cyan-500/80">
+            <p className="mt-1.5 truncate text-[11px] font-mono text-cyan-500/80" title={bots.map((b) => b.name).join(", ")}>
               {bots.length} strategies: {bots.map((b) => b.name).join(", ")}
             </p>
           )}
@@ -118,7 +131,7 @@ export default function BotsPage() {
           size="sm"
           disabled={isLoading || isValidating}
           onClick={() => revalidateBots()}
-          className="shrink-0 border-white/10 bg-white/[0.03] text-zinc-300 hover:bg-white/[0.06]"
+          className="shrink-0 border-white/10 bg-white/[0.03] text-zinc-300 transition-colors duration-150 hover:border-cyan-500/25 hover:bg-cyan-500/[0.06] hover:text-cyan-100"
         >
           <RefreshCw
             className={`mr-2 h-3.5 w-3.5 ${isValidating ? "animate-spin" : ""}`}
@@ -127,9 +140,9 @@ export default function BotsPage() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/95">
+      <div className="app-alert border-amber-500/25 bg-amber-500/[0.08] px-3 py-2 text-sm text-amber-100/95">
         <p className="font-medium text-amber-50">Bot access is restricted</p>
-        <p className="mt-1 text-amber-100/85">
+        <p className="mt-0.5 text-[13px] leading-snug text-amber-100/85">
           To use live bot starts, contact the administrator at{" "}
           <a
             href={`mailto:${ADMIN_CONTACT_EMAIL}`}
@@ -142,7 +155,7 @@ export default function BotsPage() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="app-alert border-red-500/25 bg-red-500/10 px-3 py-2 text-[13px] leading-snug text-red-200">
           Could not load strategies. Check that the backend is running and{" "}
           <code className="rounded bg-black/30 px-1">NEXT_PUBLIC_API_URL</code> points
           to it, then click Refresh. ({String((error as Error).message)})
@@ -151,10 +164,10 @@ export default function BotsPage() {
 
       {adxFilter && (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
+          className={`app-alert border px-3 py-2 text-[13px] leading-snug ${
             adxFilter.enabled
-              ? "border-cyan-500/20 bg-cyan-500/5 text-cyan-200/90"
-              : "border-zinc-700/50 bg-zinc-900/40 text-zinc-400"
+              ? "border-cyan-500/25 bg-cyan-500/[0.07] text-cyan-200/90"
+              : "border-zinc-700/50 bg-zinc-900/50 text-zinc-400"
           }`}
         >
           <span className="font-semibold text-white">ADX trend filter: </span>
@@ -172,18 +185,17 @@ export default function BotsPage() {
       )}
 
       {isLoading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-64 bg-white/[0.04]" />
+            <Skeleton key={i} className="h-40 bg-white/[0.04] sm:h-44" />
           ))}
         </div>
       ) : bots?.length ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {bots.map((bot, i) => (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {bots.map((bot) => (
             <BotCard
               key={bot.name}
               bot={bot}
-              index={i}
               availableSymbols={availableSymbols}
               sessionUnlocked={sessionUnlocked}
               requestStartGuard={requestStartGuard}
@@ -192,7 +204,7 @@ export default function BotsPage() {
         </div>
       ) : (
         !error && (
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-8 text-center text-sm text-zinc-500">
+          <div className="app-card ring-0 px-3 py-6 text-center text-sm text-zinc-500">
             No strategies returned. Restart the backend so it loads the latest code
             (including <code className="text-zinc-400">ma9</code>), then Refresh.
           </div>
@@ -201,16 +213,16 @@ export default function BotsPage() {
 
       {unlockOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/75 p-4 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="bot-unlock-title"
         >
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#141416] p-6 shadow-xl">
-            <h2 id="bot-unlock-title" className="text-lg font-semibold text-white">
+          <div className="app-card ring-0 relative w-full max-w-md p-4 shadow-xl animate-modal-in">
+            <h2 id="bot-unlock-title" className="text-base font-semibold text-white">
               Unlock bot start
             </h2>
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-1.5 text-sm leading-snug text-zinc-400">
               This service requires authorization. Contact{" "}
               <a
                 href={`mailto:${ADMIN_CONTACT_EMAIL}`}
@@ -220,7 +232,7 @@ export default function BotsPage() {
               </a>{" "}
               for access, then enter the password below.
             </p>
-            <label className="mt-4 block space-y-2">
+            <label className="mt-3 block space-y-1.5">
               <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Password
               </span>
@@ -232,14 +244,14 @@ export default function BotsPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void confirmUnlockAndStart();
                 }}
-                className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500"
+                className="w-full rounded-lg border border-white/10 bg-zinc-900/90 px-2.5 py-2 text-sm text-white outline-none transition-[border-color,box-shadow] duration-150 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20"
                 placeholder="Enter password"
               />
             </label>
             {unlockError && (
               <p className="mt-2 text-sm text-red-400">{unlockError}</p>
             )}
-            <div className="mt-6 flex justify-end gap-2">
+            <div className="mt-4 flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -269,13 +281,11 @@ export default function BotsPage() {
 
 function BotCard({
   bot,
-  index,
   availableSymbols,
   sessionUnlocked,
   requestStartGuard,
 }: {
   bot: BotStatus;
-  index: number;
   availableSymbols: string[];
   sessionUnlocked: boolean;
   requestStartGuard: (strategyName: string, params: BotRuntimeParams) => boolean;
@@ -308,115 +318,136 @@ function BotCard({
     }
   }
 
+  const startedShort = bot.startedAt
+    ? new Date(bot.startedAt).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
   return (
     <Card
-      className={`flex flex-col border-white/[0.06] bg-[#111113] transition-all duration-300 hover:border-white/[0.1] hover:bg-[#141416] animate-slide-up ${bot.active ? "glow-cyan" : ""}`}
-      style={{ animationDelay: `${index * 0.08}s` }}
+      size="sm"
+      className={`app-card ring-0 flex flex-col ${bot.active ? "ring-1 ring-cyan-500/15" : ""}`}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${bot.active ? "bg-cyan-500/10" : "bg-zinc-800/50"}`}>
-              <Bot className={`h-5 w-5 ${bot.active ? "text-cyan-400" : "text-zinc-600"}`} />
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${bot.active ? "bg-cyan-500/10" : "bg-zinc-800/50"}`}
+            >
+              <Bot className={`h-4 w-4 ${bot.active ? "text-cyan-400" : "text-zinc-600"}`} />
             </div>
-            <div>
-              <CardTitle className="text-base text-white">{bot.displayName}</CardTitle>
-              <p className="text-xs text-zinc-500 font-mono">{bot.name}</p>
+            <div className="min-w-0">
+              <CardTitle className="text-sm font-semibold leading-tight text-white">
+                {bot.displayName}
+              </CardTitle>
+              <p className="truncate font-mono text-[10px] text-zinc-500">{bot.name}</p>
             </div>
           </div>
           <Badge
-            className={bot.active
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-              : "bg-zinc-800 text-zinc-500 border-zinc-700"
+            className={
+              bot.active
+                ? "shrink-0 bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                : "shrink-0 bg-zinc-800 text-zinc-500 border-zinc-700"
             }
           >
-            <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${bot.active ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`} />
-            {bot.active ? "Active" : "Inactive"}
+            <span
+              className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${bot.active ? "bg-emerald-400" : "bg-zinc-600"}`}
+            />
+            {bot.active ? "On" : "Off"}
           </Badge>
         </div>
-        <CardDescription className="mt-2 text-zinc-500 text-xs leading-relaxed">
+        <CardDescription className="mt-1 line-clamp-2 text-[11px] leading-snug text-zinc-500">
           {bot.description}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col justify-between gap-4">
-        <div className="grid grid-cols-2 gap-3">
-          <InfoChip icon={<Zap className="h-3 w-3" />} label="Evaluations" value={String(bot.evaluations ?? 0)} />
+      <CardContent className="flex flex-1 flex-col justify-between gap-2">
+        <div className="grid grid-cols-2 gap-2">
+          <InfoChip icon={<Zap className="h-3 w-3" />} label="Evals" value={String(bot.evaluations ?? 0)} />
           <InfoChip icon={<Signal className="h-3 w-3" />} label="Signals" value={String(bot.signalsGenerated ?? 0)} />
           {bot.startedAt && (
             <div className="col-span-2">
-              <InfoChip icon={<Clock className="h-3 w-3" />} label="Started" value={new Date(bot.startedAt).toLocaleString()} />
+              <InfoChip icon={<Clock className="h-3 w-3" />} label="Started" value={startedShort} />
             </div>
           )}
         </div>
 
         {!bot.active && (
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-3">
-            <p className="text-xs uppercase tracking-wider text-zinc-500">Runtime Params</p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <label className="space-y-1 col-span-2">
-                <span className="text-zinc-500">Trading Pair</span>
-                <select
-                  value={runtimeParams.symbols?.[0] ?? availableSymbols[0]}
-                  onChange={(e) =>
-                    setRuntimeParams((p) => ({ ...p, symbols: [e.target.value] }))
+          <details className="runtime-details rounded-lg border border-white/[0.06] bg-white/[0.02]">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 [&::-webkit-details-marker]:hidden">
+              <span>Parameters</span>
+              <ChevronDown className="runtime-chevron h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+            </summary>
+            <div className="space-y-2 border-t border-white/[0.06] px-2 pb-2 pt-2">
+              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                <label className="space-y-0.5 col-span-2">
+                  <span className="text-zinc-500">Pair</span>
+                  <select
+                    value={runtimeParams.symbols?.[0] ?? availableSymbols[0]}
+                    onChange={(e) =>
+                      setRuntimeParams((p) => ({ ...p, symbols: [e.target.value] }))
+                    }
+                    className="w-full rounded border border-white/10 bg-zinc-900 px-1.5 py-1 text-zinc-200 outline-none focus:border-cyan-500"
+                  >
+                    {availableSymbols.map((sym) => (
+                      <option key={sym} value={sym}>
+                        {sym}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <ParamInput
+                  label="Lev"
+                  value={runtimeParams.leverage}
+                  onChange={(v) => setRuntimeParams((p) => ({ ...p, leverage: v }))}
+                />
+                <ParamInput
+                  label="USDT"
+                  value={runtimeParams.tradeUsdt}
+                  onChange={(v) => setRuntimeParams((p) => ({ ...p, tradeUsdt: v }))}
+                />
+                <ParamInput
+                  label="SL %"
+                  value={runtimeParams.slPercent}
+                  onChange={(v) => setRuntimeParams((p) => ({ ...p, slPercent: v }))}
+                />
+                <ParamInput
+                  label="TP %"
+                  value={runtimeParams.tpPercent}
+                  onChange={(v) => setRuntimeParams((p) => ({ ...p, tpPercent: v }))}
+                />
+                <ParamInput
+                  label="ADX p"
+                  value={runtimeParams.adxPeriod}
+                  onChange={(v) => setRuntimeParams((p) => ({ ...p, adxPeriod: v }))}
+                  disabled={!runtimeParams.adxFilterEnabled}
+                />
+                <ParamInput
+                  label="ADX min"
+                  value={runtimeParams.adxThreshold}
+                  onChange={(v) => setRuntimeParams((p) => ({ ...p, adxThreshold: v }))}
+                  disabled={!runtimeParams.adxFilterEnabled}
+                />
+              </div>
+              <div className="flex items-center justify-between rounded border border-white/[0.06] px-2 py-1">
+                <span className="text-[11px] text-zinc-400">ADX filter</span>
+                <Switch
+                  checked={runtimeParams.adxFilterEnabled}
+                  onCheckedChange={(checked) =>
+                    setRuntimeParams((p) => ({ ...p, adxFilterEnabled: checked }))
                   }
-                  className="w-full rounded-md border border-white/10 bg-zinc-900 px-2 py-1.5 text-zinc-200 outline-none focus:border-cyan-500"
-                >
-                  {availableSymbols.map((sym) => (
-                    <option key={sym} value={sym}>
-                      {sym}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <ParamInput
-                label="Leverage"
-                value={runtimeParams.leverage}
-                onChange={(v) => setRuntimeParams((p) => ({ ...p, leverage: v }))}
-              />
-              <ParamInput
-                label="Trade USDT"
-                value={runtimeParams.tradeUsdt}
-                onChange={(v) => setRuntimeParams((p) => ({ ...p, tradeUsdt: v }))}
-              />
-              <ParamInput
-                label="Stop Loss %"
-                value={runtimeParams.slPercent}
-                onChange={(v) => setRuntimeParams((p) => ({ ...p, slPercent: v }))}
-              />
-              <ParamInput
-                label="Target %"
-                value={runtimeParams.tpPercent}
-                onChange={(v) => setRuntimeParams((p) => ({ ...p, tpPercent: v }))}
-              />
-              <ParamInput
-                label="ADX Period"
-                value={runtimeParams.adxPeriod}
-                onChange={(v) => setRuntimeParams((p) => ({ ...p, adxPeriod: v }))}
-                disabled={!runtimeParams.adxFilterEnabled}
-              />
-              <ParamInput
-                label="ADX Min"
-                value={runtimeParams.adxThreshold}
-                onChange={(v) => setRuntimeParams((p) => ({ ...p, adxThreshold: v }))}
-                disabled={!runtimeParams.adxFilterEnabled}
-              />
+                  disabled={loading}
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-white/[0.06] px-3 py-2">
-              <span className="text-xs text-zinc-400">ADX Filter</span>
-              <Switch
-                checked={runtimeParams.adxFilterEnabled}
-                onCheckedChange={(checked) =>
-                  setRuntimeParams((p) => ({ ...p, adxFilterEnabled: checked }))
-                }
-                disabled={loading}
-              />
-            </div>
-          </div>
+          </details>
         )}
 
-        <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+        <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-2">
           <div className="flex items-center gap-2">
             <span className={`h-2 w-2 rounded-full ${bot.active ? "bg-emerald-400" : "bg-zinc-600"}`} />
             <span className="text-sm font-medium text-zinc-300">
@@ -445,7 +476,7 @@ function BotCard({
         </div>
 
         {error && (
-          <p className="text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>
+          <p className="rounded-md bg-red-500/10 px-2 py-1 text-[11px] text-red-400">{error}</p>
         )}
       </CardContent>
     </Card>
@@ -464,7 +495,7 @@ function ParamInput({
   disabled?: boolean;
 }) {
   return (
-    <label className="space-y-1">
+    <label className="space-y-0.5">
       <span className="text-zinc-500">{label}</span>
       <input
         type="number"
@@ -472,7 +503,7 @@ function ParamInput({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full rounded-md border border-white/10 bg-zinc-900 px-2 py-1.5 text-zinc-200 outline-none focus:border-cyan-500 disabled:opacity-50"
+        className="w-full rounded border border-white/10 bg-zinc-900 px-1.5 py-1 text-[11px] tabular-nums text-zinc-200 outline-none focus:border-cyan-500 disabled:opacity-50"
       />
     </label>
   );
@@ -480,12 +511,12 @@ function ParamInput({
 
 function InfoChip({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-      <div className="flex items-center gap-1.5 text-zinc-500">
+    <div className="rounded-md border border-white/[0.06] bg-white/[0.02] px-2 py-1.5">
+      <div className="flex items-center gap-1 text-zinc-500">
         {icon}
-        <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
+        <span className="text-[9px] font-medium uppercase tracking-wider">{label}</span>
       </div>
-      <p className="mt-0.5 text-sm font-semibold text-zinc-200 truncate">{value}</p>
+      <p className="mt-0.5 truncate text-xs font-semibold tabular-nums text-zinc-200">{value}</p>
     </div>
   );
 }

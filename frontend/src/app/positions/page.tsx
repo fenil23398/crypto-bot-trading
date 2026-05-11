@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Inbox, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ASTER_DEX_SITE_URL } from "@/lib/aster-dex";
 
 export default function PositionsPage() {
   const { data: positions, isLoading } = usePositions();
@@ -29,18 +30,25 @@ export default function PositionsPage() {
     positions?.filter((p) => parseFloat(p.positionAmt) !== 0) ?? [];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
-          Positions
-        </h1>
-        <p className="text-sm text-zinc-500">
-          Live open positions from ASTER Dex (auto-refreshes every 5s)
+        <h1 className="app-heading">Positions</h1>
+        <p className="app-subheading mt-0.5">
+          Open positions synced from{" "}
+          <a
+            href={ASTER_DEX_SITE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-cyan-500/90 underline-offset-2 hover:text-cyan-400 hover:underline"
+          >
+            Aster DEX
+          </a>
+          ; refreshes every 5s.
         </p>
       </div>
 
-      <Card className="border border-white/[0.06] bg-[#111113] ring-0">
-        <CardHeader className="border-b border-white/[0.06] pb-4">
+      <Card className="app-card ring-0">
+        <CardHeader className="border-b border-white/[0.06] pb-3">
           <CardAction>
             <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">
               <span className="relative flex h-2 w-2">
@@ -60,7 +68,7 @@ export default function PositionsPage() {
             {open.length} position{open.length !== 1 ? "s" : ""} open
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="pt-3">
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -102,7 +110,7 @@ export default function PositionsPage() {
                     return (
                       <TableRow
                         key={`${pos.symbol}-${pos.positionSide}`}
-                        className="border-white/[0.06] hover:bg-white/[0.02]"
+                        className="border-white/[0.06] transition-colors duration-200 hover:bg-white/[0.04]"
                       >
                         <TableCell className="font-medium text-white">
                           {pos.symbol}

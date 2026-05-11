@@ -34,17 +34,6 @@ export function useBotSignals(strategy: string | null, limit = 100) {
   );
 }
 
-export function useOrders(params?: {
-  strategy?: string;
-  symbol?: string;
-  limit?: number;
-}) {
-  const key = `orders-${params?.strategy ?? "all"}-${params?.symbol ?? "all"}-${params?.limit ?? 50}`;
-  return useSWR(key, () => api.getOrders(params).then((r) => r.orders), {
-    refreshInterval: 15_000,
-  });
-}
-
 export function usePositions() {
   return useSWR("positions", () => api.getPositions().then((r) => r.positions), {
     refreshInterval: 5_000,

@@ -71,7 +71,7 @@ const ACCENT_COLORS = {
 } as const;
 
 const inputClass =
-  "flex h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-sm text-zinc-200 shadow-sm transition-colors focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20";
+  "flex h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-sm text-zinc-200 shadow-sm transition-[border-color,box-shadow,background-color] duration-200 focus:border-cyan-500/50 focus:bg-white/[0.05] focus:outline-none focus:ring-2 focus:ring-cyan-500/20";
 
 const labelClass =
   "text-xs font-medium uppercase tracking-wider text-zinc-500";
@@ -116,16 +116,16 @@ export default function BacktestPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Backtest</h1>
-        <p className="text-sm text-zinc-500">
+        <h1 className="app-heading">Backtest</h1>
+        <p className="app-subheading mt-0.5">
           Simulate strategies on stored candles with SL/TP. Use the ADX block below to
           match live bot filtering.
         </p>
       </div>
 
-      <Card className="border-white/[0.06] bg-[#111113] transition-all duration-300 hover:border-white/[0.1]">
+      <Card className="app-card ring-0">
         <CardHeader>
           <CardTitle className="text-white">Configuration</CardTitle>
           <CardDescription className="text-zinc-500">
@@ -133,7 +133,7 @@ export default function BacktestPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <label className={labelClass}>Strategy</label>
               <select
@@ -269,7 +269,7 @@ export default function BacktestPage() {
           <Button
             onClick={handleRunBacktest}
             disabled={loading}
-            className="mt-4 bg-cyan-500 font-semibold text-black hover:bg-cyan-600 disabled:opacity-50"
+            className="mt-3 bg-cyan-500 font-semibold text-black transition-colors duration-150 hover:bg-cyan-400 disabled:opacity-50"
           >
             {loading ? "Running..." : "Run Backtest"}
           </Button>
@@ -280,30 +280,28 @@ export default function BacktestPage() {
       </Card>
 
       {loading && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <Skeleton key={i} className="h-28 bg-white/[0.04]" />
+            <Skeleton key={i} className="h-24 bg-white/[0.04]" />
           ))}
         </div>
       )}
 
       {result && !loading && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <BacktestStatCard
               title="Strategy"
               value={result.summary.strategyDisplayName}
               description={result.summary.symbol}
               icon={<BarChart3 className="h-4 w-4" />}
               accent="zinc"
-              delay={0}
             />
             <BacktestStatCard
               title="Start Balance"
               value={`$${result.summary.startBalance.toFixed(2)}`}
               icon={<DollarSign className="h-4 w-4" />}
               accent="zinc"
-              delay={0.05}
             />
             <BacktestStatCard
               title="End Balance"
@@ -319,7 +317,6 @@ export default function BacktestPage() {
                   ? "text-emerald-400"
                   : "text-red-400"
               }
-              delay={0.1}
             />
             <BacktestStatCard
               title="Total Return"
@@ -337,7 +334,6 @@ export default function BacktestPage() {
                   ? "text-emerald-400"
                   : "text-red-400"
               }
-              delay={0.15}
             />
             <BacktestStatCard
               title="Win Rate"
@@ -345,7 +341,6 @@ export default function BacktestPage() {
               description={`${result.summary.winCount}W / ${result.summary.lossCount}L`}
               icon={<Target className="h-4 w-4" />}
               accent="cyan"
-              delay={0.2}
             />
             <BacktestStatCard
               title="Max Drawdown"
@@ -354,7 +349,6 @@ export default function BacktestPage() {
               icon={<AlertTriangle className="h-4 w-4" />}
               accent="red"
               valueClassName="text-red-400"
-              delay={0.25}
             />
             <BacktestStatCard
               title="Stop Loss Hits"
@@ -362,7 +356,6 @@ export default function BacktestPage() {
               description={`SL at ${result.summary.slPercent}% of margin`}
               icon={<ShieldOff className="h-4 w-4" />}
               accent="red"
-              delay={0.3}
             />
             <BacktestStatCard
               title="Take Profit Hits"
@@ -370,14 +363,12 @@ export default function BacktestPage() {
               description={`TP at ${result.summary.tpPercent}% of margin`}
               icon={<CircleDollarSign className="h-4 w-4" />}
               accent="green"
-              delay={0.35}
             />
             <BacktestStatCard
               title="Total Trades"
               value={String(result.summary.totalTrades)}
               icon={<Activity className="h-4 w-4" />}
               accent="violet"
-              delay={0.4}
             />
             <BacktestStatCard
               title="ADX filter"
@@ -393,20 +384,13 @@ export default function BacktestPage() {
               }
               icon={<Filter className="h-4 w-4" />}
               accent="cyan"
-              delay={0.42}
             />
           </div>
 
-          <StrategyConfigCard
-            config={result.summary.strategyConfig}
-            delay={0.45}
-          />
+          <StrategyConfigCard config={result.summary.strategyConfig} />
 
           {result.summary.superTrendDiagnostics && (
-            <Card
-              className="border-amber-500/20 bg-[#111113] transition-all duration-300 hover:border-amber-500/30 animate-slide-up"
-              style={{ animationDelay: "0.48s", animationFillMode: "both" }}
-            >
+            <Card className="app-card ring-0 border-amber-500/25 transition-colors duration-150 hover:border-amber-500/35">
               <CardHeader className="flex flex-row items-start gap-3 pb-2">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/25 bg-amber-500/10">
                   <Info className="h-4 w-4 text-amber-400" />
@@ -500,10 +484,7 @@ export default function BacktestPage() {
             </Card>
           )}
 
-          <Card
-            className="border-white/[0.06] bg-[#111113] transition-all duration-300 hover:border-white/[0.1] animate-slide-up"
-            style={{ animationDelay: "0.5s", animationFillMode: "both" }}
-          >
+          <Card className="app-card ring-0">
             <CardHeader>
               <CardTitle className="text-white">Trade Log</CardTitle>
               <CardDescription className="text-zinc-500">
@@ -657,21 +638,12 @@ export default function BacktestPage() {
   );
 }
 
-function StrategyConfigCard({
-  config,
-  delay,
-}: {
-  config: Record<string, number>;
-  delay: number;
-}) {
+function StrategyConfigCard({ config }: { config: Record<string, number> }) {
   const entries = Object.entries(config);
   if (!entries.length) return null;
 
   return (
-    <Card
-      className="border-white/[0.06] bg-[#111113] transition-all duration-300 hover:border-white/[0.1] animate-slide-up"
-      style={{ animationDelay: `${delay}s`, animationFillMode: "both" }}
-    >
+    <Card className="app-card ring-0">
       <CardHeader className="flex flex-row items-center gap-3 pb-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02]">
           <FlaskConical className="h-4 w-4 text-cyan-400" />
@@ -713,7 +685,6 @@ function BacktestStatCard({
   icon,
   accent,
   valueClassName,
-  delay,
 }: {
   title: string;
   value: string;
@@ -721,14 +692,10 @@ function BacktestStatCard({
   icon: ReactNode;
   accent: keyof typeof ACCENT_COLORS;
   valueClassName?: string;
-  delay: number;
 }) {
   const c = ACCENT_COLORS[accent];
   return (
-    <Card
-      className="border-white/[0.06] bg-[#111113] transition-all duration-300 hover:border-white/[0.1] animate-slide-up"
-      style={{ animationDelay: `${delay}s`, animationFillMode: "both" }}
-    >
+    <Card className="app-card ring-0">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-xs font-medium uppercase tracking-wider text-zinc-500">
           {title}

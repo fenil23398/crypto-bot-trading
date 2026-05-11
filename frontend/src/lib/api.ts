@@ -46,14 +46,6 @@ export const api = {
       `/bots/${strategy}/signals?limit=${limit}`
     ),
 
-  getOrders: (params?: { strategy?: string; symbol?: string; limit?: number }) => {
-    const q = new URLSearchParams();
-    if (params?.strategy) q.set("strategy", params.strategy);
-    if (params?.symbol) q.set("symbol", params.symbol);
-    if (params?.limit) q.set("limit", String(params.limit));
-    return request<{ orders: import("./types").Order[] }>(`/orders?${q}`);
-  },
-
   getPositions: () =>
     request<{ positions: import("./types").Position[] }>("/orders/positions"),
 
