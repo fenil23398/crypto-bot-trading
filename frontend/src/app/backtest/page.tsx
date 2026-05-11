@@ -79,11 +79,11 @@ const labelClass =
 export default function BacktestPage() {
   const [strategy, setStrategy] = useState("supertrend");
   const [symbol, setSymbol] = useState("BTCUSDT");
-  const [startBalance, setStartBalance] = useState(50);
-  const [leverage, setLeverage] = useState(3);
+  const [startBalance, setStartBalance] = useState(100);
+  const [leverage, setLeverage] = useState(4);
   const [feePercent, setFeePercent] = useState(0.05);
-  const [slPercent, setSlPercent] = useState(25);
-  const [tpPercent, setTpPercent] = useState(25);
+  const [slPercent, setSlPercent] = useState(20);
+  const [tpPercent, setTpPercent] = useState(20);
   const [adxFilterEnabled, setAdxFilterEnabled] = useState(true);
   const [adxPeriod, setAdxPeriod] = useState(14);
   const [adxThreshold, setAdxThreshold] = useState(25);

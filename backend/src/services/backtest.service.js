@@ -125,21 +125,50 @@ const STRATEGY_CONFIGS = {
   },
 };
 
+/** Default trade sizing for SuperTrend backtests (margin % SL/TP vs other strategies). */
+const SUPERTREND_BACKTEST_DEFAULTS = {
+  startBalance: 100,
+  leverage: 4,
+  slPercent: 20,
+  tpPercent: 20,
+};
+
 /**
  * Runs a backtest for any supported strategy over stored candle data.
  */
-export async function runBacktest({
-  strategy = 'supertrend',
-  symbol = 'BTCUSDT',
-  startBalance = 50,
-  leverage = config.aster.leverage,
-  feePercent = 0.05,
-  slPercent = config.aster.slPercent,
-  tpPercent = config.aster.tpPercent,
-  adxFilterEnabled,
-  adxPeriod,
-  adxThreshold,
-} = {}) {
+export async function runBacktest(params = {}) {
+  const strategyName = params.strategy ?? 'supertrend';
+  const tradeDefaults =
+    strategyName === 'supertrend'
+      ? { ...SUPERTREND_BACKTEST_DEFAULTS }
+      : {
+          startBalance: 50,
+          leverage: config.aster.leverage,
+          slPercent: config.aster.slPercent,
+          tpPercent: config.aster.tpPercent,
+        };
+
+  const merged = {
+    strategy: strategyName,
+    symbol: 'BTCUSDT',
+    feePercent: 0.05,
+    ...tradeDefaults,
+    ...params,
+  };
+
+  const {
+    strategy,
+    symbol,
+    startBalance,
+    leverage,
+    feePercent,
+    slPercent,
+    tpPercent,
+    adxFilterEnabled,
+    adxPeriod,
+    adxThreshold,
+  } = merged;
+
   const strategyDef = STRATEGY_CONFIGS[strategy];
   if (!strategyDef) {
     throw new Error(`Unknown strategy: ${strategy}. Available: ${Object.keys(STRATEGY_CONFIGS).join(', ')}`);
