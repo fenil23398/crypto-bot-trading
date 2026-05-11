@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useBots } from "@/lib/hooks";
 import { api } from "@/lib/api";
 import { mutate } from "swr";
 import { RefreshCw } from "lucide-react";
+import {
+  getExpectedBotStartPassword,
+  readBotStartUnlockedFromStorage,
+  writeBotStartUnlockedToStorage,
+} from "@/lib/bot-start-guard";
 import {
   Card,
   CardContent,
@@ -19,12 +24,74 @@ import { Switch } from "@/components/ui/switch";
 import { Bot, Zap, Signal, Clock } from "lucide-react";
 import type { BotRuntimeParams, BotStatus } from "@/lib/types";
 
+const ADMIN_CONTACT_EMAIL = "fenilshah23398@gmail.com";
+
 export default function BotsPage() {
   const { data: botsData, isLoading, error, isValidating, mutate: revalidateBots } =
     useBots();
   const bots = botsData?.bots;
   const adxFilter = botsData?.adxFilter;
   const availableSymbols = botsData?.availableSymbols ?? ["BTCUSDT", "ETHUSDT"];
+
+  const [sessionUnlocked, setSessionUnlocked] = useState(false);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [pendingStart, setPendingStart] = useState<{
+    name: string;
+    params: BotRuntimeParams;
+  } | null>(null);
+  const [unlockPassword, setUnlockPassword] = useState("");
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [unlockSubmitting, setUnlockSubmitting] = useState(false);
+
+  useEffect(() => {
+    setSessionUnlocked(readBotStartUnlockedFromStorage());
+  }, []);
+
+  const requestStartGuard = useCallback(
+    (strategyName: string, params: BotRuntimeParams): boolean => {
+      if (sessionUnlocked) return true;
+      setPendingStart({ name: strategyName, params });
+      setUnlockPassword("");
+      setUnlockError(null);
+      setUnlockOpen(true);
+      return false;
+    },
+    [sessionUnlocked],
+  );
+
+  async function confirmUnlockAndStart() {
+    setUnlockError(null);
+    const expected = getExpectedBotStartPassword();
+    if (unlockPassword !== expected) {
+      setUnlockError("Incorrect password. Contact the administrator for access.");
+      return;
+    }
+    if (!pendingStart) {
+      setUnlockOpen(false);
+      return;
+    }
+    setUnlockSubmitting(true);
+    try {
+      writeBotStartUnlockedToStorage();
+      setSessionUnlocked(true);
+      await api.startBot(pendingStart.name, pendingStart.params);
+      setUnlockOpen(false);
+      setPendingStart(null);
+      setUnlockPassword("");
+      await mutate("bots");
+    } catch (err) {
+      setUnlockError(err instanceof Error ? err.message : "Failed to start bot");
+    } finally {
+      setUnlockSubmitting(false);
+    }
+  }
+
+  function cancelUnlock() {
+    setUnlockOpen(false);
+    setPendingStart(null);
+    setUnlockPassword("");
+    setUnlockError(null);
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -58,6 +125,20 @@ export default function BotsPage() {
           />
           Refresh list
         </Button>
+      </div>
+
+      <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/95">
+        <p className="font-medium text-amber-50">Bot access is restricted</p>
+        <p className="mt-1 text-amber-100/85">
+          To use live bot starts, contact the administrator at{" "}
+          <a
+            href={`mailto:${ADMIN_CONTACT_EMAIL}`}
+            className="font-mono text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
+          >
+            {ADMIN_CONTACT_EMAIL}
+          </a>
+          . You will need the service password to enable Start for this session.
+        </p>
       </div>
 
       {error && (
@@ -104,6 +185,8 @@ export default function BotsPage() {
               bot={bot}
               index={i}
               availableSymbols={availableSymbols}
+              sessionUnlocked={sessionUnlocked}
+              requestStartGuard={requestStartGuard}
             />
           ))}
         </div>
@@ -115,6 +198,71 @@ export default function BotsPage() {
           </div>
         )
       )}
+
+      {unlockOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bot-unlock-title"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#141416] p-6 shadow-xl">
+            <h2 id="bot-unlock-title" className="text-lg font-semibold text-white">
+              Unlock bot start
+            </h2>
+            <p className="mt-2 text-sm text-zinc-400">
+              This service requires authorization. Contact{" "}
+              <a
+                href={`mailto:${ADMIN_CONTACT_EMAIL}`}
+                className="text-cyan-400 underline underline-offset-2 hover:text-cyan-300"
+              >
+                {ADMIN_CONTACT_EMAIL}
+              </a>{" "}
+              for access, then enter the password below.
+            </p>
+            <label className="mt-4 block space-y-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                Password
+              </span>
+              <input
+                type="password"
+                autoComplete="off"
+                value={unlockPassword}
+                onChange={(e) => setUnlockPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void confirmUnlockAndStart();
+                }}
+                className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500"
+                placeholder="Enter password"
+              />
+            </label>
+            {unlockError && (
+              <p className="mt-2 text-sm text-red-400">{unlockError}</p>
+            )}
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={cancelUnlock}
+                disabled={unlockSubmitting}
+                className="border-white/10 bg-transparent text-zinc-300 hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void confirmUnlockAndStart()}
+                disabled={unlockSubmitting || !unlockPassword}
+                className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/30"
+              >
+                {unlockSubmitting ? "Starting…" : "Unlock & start"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -123,10 +271,14 @@ function BotCard({
   bot,
   index,
   availableSymbols,
+  sessionUnlocked,
+  requestStartGuard,
 }: {
   bot: BotStatus;
   index: number;
   availableSymbols: string[];
+  sessionUnlocked: boolean;
+  requestStartGuard: (strategyName: string, params: BotRuntimeParams) => boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +295,9 @@ function BotCard({
       if (bot.active) {
         await api.stopBot(bot.name);
       } else {
+        if (!sessionUnlocked && !requestStartGuard(bot.name, runtimeParams)) {
+          return;
+        }
         await api.startBot(bot.name, runtimeParams);
       }
       await mutate("bots");
